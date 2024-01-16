@@ -1,0 +1,239 @@
+---
+title: "PEC 5"
+author: "UOC"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+**NOMBRE: Borja Villena Pardo**
+
+# Introducción
+
+En esta PEC utilizaremos el conjunto de datos 'winequality-red.csv' que contiene información técnica y gustativa de distintos tipos de vino tinto.
+
+Se pueden consultar en 
+[https://archive.ics.uci.edu/ml/datasets/Wine+Quality](https://archive.ics.uci.edu/ml/datasets/Wine+Quality)
+
+Las variables que contiene son las siguientes: 
+
+- acidez fija
+- acidez volátil
+- ácido cítrico
+- azúcar residual
+- cloruros
+- dióxido de azufre libre
+- dióxido de azufre total
+- densidad
+- pH
+- sulfatos
+- alcohol
+- calidad
+
+
+Os puede ser útil consultar el siguiente material:
+
+- Módulos teóricos de Regresión lineal simple, múltiple y ANOVA.
+- Actividades resueltas del Reto 5 (regresión lineal simple, múltiple y ANOVA).
+
+Hay que entregar la práctica en fichero pdf o html (exportando el resultado final a pdf o html por ejemplo). Se recomienda generar el informe con Rmarkdown que genera automáticamente el pdf/html a entregar.
+
+NOTA 1: no es necesario ni limpiar ni preprocesar los datos para este ejercicio
+
+NOTA 2: comprobar que el dataset ha cargado correctamente (vigilar con la separación que se utiliza en el csv)
+
+```{r,eval=TRUE,echo=TRUE}
+## cargar datos
+data_wine <- read.csv('data_pac5.csv', header = TRUE, sep = ';')
+```
+
+
+
+# Pregunta 1. (resolver con R). (3 puntos)
+
+La empresa especializada en la creación de vinos de alta calidad está buscando comprender mejor las variables que influyen en la calidad del vino para optimizar sus estrategias de producción y marketing. Se realizará un análisis para identificar las características clave que contribuyen a la calidad del vino y determinar el enfoque para futuras campañas publicitarias.
+
+
+a) Realiza un gráfico de dispersión entre la variable *citric.acid* y la variable *residual.sugar*. ¿Cuál es el coeficiente de correlación? Interpretad el resultado (1 punto).
+
+**Solución:**
+
+
+***Podemos observar que la correlación entre ambas variables es positiva y muy cercana a cero. Esto nos indica que la cantidad de azúcar residual no depende especialmente del ácido cítrico.***
+
+```{r,eval=TRUE,echo=TRUE}
+#Espacio para solución
+Ácido_cítrico <- c(data_wine$citric.acid)
+Azúcar_residual <- c(data_wine$residual.sugar)
+
+# Creamos tabla con ambas variables
+tabla_ci_az <- cbind(Ácido_cítrico, Azúcar_residual)
+
+# Calculamos coeficiente de correlación lineal de Pearson 
+corr_ci_az <- cor(tabla_ci_az[,c('Ácido_cítrico', 'Azúcar_residual')], 
+                  use = 'complete.obs')
+
+print(corr_ci_az)
+
+# Realizamos gráfico del diagrama de dispersión y añadimos recta de regresión 
+# para una mejor visualización
+
+par(pin=c(5, 2))
+
+plot(Ácido_cítrico, Azúcar_residual, pch = 5, col = 'blue', cex = 0.3, main = 'Gráfico de Dispersión', xlab = "Ácido Cítrico", ylab = "Azúcar Residual")
+
+abline(lm(Azúcar_residual~Ácido_cítrico), col = 'red')
+
+legend('topright', legend = c('Regresión lineal', 'Variables'),
+       col = c('red','blue'), lty = c(1,0), pch = c(-1, 5))
+
+```
+
+
+b) Encontrad los siguientes dos parámetros del modelo de regresión lineal a estudiar: el intercepto ($B_0$) y la pendiente ($B_1$). Nota: Usa citric.acid como variable dependiente (1 punto).
+
+**Solución:**
+
+```{r,eval=TRUE,echo=TRUE}
+#Espacio para solución
+
+# Lo calculamos de manera de manual
+B_1_pend <- cov(Azúcar_residual, Ácido_cítrico) / var(Azúcar_residual)
+
+B_0_inter <- mean(Ácido_cítrico) - B_1_pend * mean(Azúcar_residual)
+
+print(c(B_0_inter,  B_1_pend))
+
+# Ahora lo calculamos usando la instrucción lm de R para comprobar que los datos coinciden
+mod_regresion <- lm(Ácido_cítrico ~ Azúcar_residual)
+print(mod_regresion)
+```
+***El valor del intercepto*** $B_0$ ***es*** `r B_0_inter`    
+***El valor de la pendiente*** $B_1$ ***es*** `r B_1_pend`
+
+c) ¿Qué porcentaje de la variación en la calidad del vino (ácido cítrico) no puede ser explicado por los Azúcar_residuales residuales? (1 punto)
+
+**Solución:**
+
+```{r,eval=TRUE,echo=TRUE}
+#Espacio para solución
+
+# Adquirimos el coeficiente de determinación
+r_2 <- summary(mod_regresion)$r.squared
+
+# Calculamos el porcentaje de variación no explicada
+porc_no <- (1 - r_2) * 100
+
+```
+***La proporción de la variación en la variable 'Calidad_vino' explicada por la variable 'Azúcar_residual', es decir, el coeficiente de determinación*** $R^2$ ***es ***`r r_2`
+
+***El porcentaje de la variación en la calidad del vino que no puede ser explicada por la variable de Azúcar_residuales es del ***`r round(porc_no, 2)` ***%***
+
+# Pregunta 2. (resolver con R). (3 puntos)
+
+Para la creación de la próxima versión mejorada de vinos tintos, se han seleccionado distintos vinos y se han sometido a diversas catas.
+
+Se procederá inicialmente a analizar los datos obtenidos de la evaluación de la influencia de la cantidad de sulfatos en la calidad del vino. Se buscará determinar si existen diferencias significativas entre las cantidades de la variable *sulphates*  para distintos grupos definidos por la calidad (variable Quality_group **no disponible en el dataset**).
+
+Si miramos la salida del modelo creado, contestad las preguntas siguientes:
+
+
+a) ¿Cuántos grupos y cuántas observaciones hay en el dataset? (1 punto)
+
+**Solución:**
+
+***El número de grupos definidos por la calidad es de 3***    
+***El número de observaciones es de 1595***
+
+
+b) Si se utiliza el nivel de significación $\alpha = 0.05$, ¿qué valor crítico se debe utilizar para realizar el análisis de la varianza? (1 punto)
+
+**Solución:**
+
+```{r,eval=TRUE,echo=TRUE}
+#Espacio para solución
+
+# Definimos valor de alpha
+alpha <- 0.05
+
+# Definimos los grados de libertad de numerador y denominador
+grado_numerador <- 3
+grado_denominador <- 1595
+
+# Calculamos el valor crítico
+vc <- qf(alpha, grado_numerador, grado_denominador, lower.tail = F)
+print(vc)
+```
+***El valor crítico es*** `r vc`
+
+c) ¿Cuál es la conclusión del análisis de la varianza (con un nivel de significación del 5%) en función del valor crítico? (1 punto)
+
+**Solución:**
+
+***Dado que el valor F calculado*** 36.94 ***es mayor que *** `r vc`***, rechazamos la hipótesis nula. Es decir, hay evidencia estadística de que hay por lo menos dos grupos de la variable 'sulphates' que son diferentes.*** 
+
+# Pregunta 3 (resolver con R). (4 puntos)
+
+Exploraremos un modelo predictivo sobre la calidad del vino utilizando múltiples variables:
+
+a) Escribe la ecuación que se obtiene del modelo de regresión múltiple para predecir la calidad del vino utilizando las variables de pH, contenido de azúcar residual y sulfatos. (1 punto)
+
+**Solución:**
+
+```{r,eval=TRUE,echo=TRUE}
+#Espacio para solución
+calidad <- c(data_wine$quality)
+ph <- c(data_wine$pH)
+sulfato <- c(data_wine$sulphates)
+
+mod_reg_multiple <- lm(calidad ~ ph + Azúcar_residual + sulfato,
+                       data = data_wine)
+
+print(summary(mod_reg_multiple))
+
+ecuacion = paste("Calidad = ", round((coef(mod_reg_multiple))[1], 3), " + (",
+                 round((coef(mod_reg_multiple))[2], 3), ") * pH + ",
+                 round((coef(mod_reg_multiple))[3], 3), " * AzucarResidual + ",
+                 round((coef(mod_reg_multiple))[4], 3), " * Sulfatos", sep = "")
+
+print(ecuacion)
+```
+***La ecuación que se obtiene es: ***        
+
+`r  ecuacion`
+
+
+b) ¿El modelo en su conjunto es significativo con un nivel del 5%? Además, ¿cuál es el coeficiente de determinación obtenido para este modelo? (1 punto)
+
+**Solución:**    
+
+***El modelo en su conjunto es significativo ya que el p-valor*** <2.2e-16> ***es menor que ***0.05 (5 %)  
+
+***El coeficiente de determinación es: *** `r summary(mod_reg_multiple)$r.squared`
+
+c) Dado un vino con un pH de 3.5, un contenido de azúcar residual de 2.5 y sulfatos de 0.6, ¿cuál sería su calidad según el modelo establecido? (1 punto)
+
+**Solución:**
+
+```{r,eval=TRUE,echo=TRUE}
+#Espacio para solución
+
+b0 <- ((coef(mod_reg_multiple))[1])
+b1 <- ((coef(mod_reg_multiple))[2])
+b2 <- ((coef(mod_reg_multiple))[3])
+b3 <- ((coef(mod_reg_multiple))[4])
+
+calculo_calidad <- b0 + b1 * 3.5 + b2 * 2.5 + b3 * 0.6
+
+print(calculo_calidad)
+
+```
+***Su calidad sería: ***`r calculo_calidad`
+
+d) Si tuvieras que eliminar alguna variable del modelo del apartado a), considerando un nivel de significación del 5%, ¿cuál eliminarías y por qué? (1 punto).
+
+**Solución:**
+
+***Eliminaría la variable 'ph', ya que su p-valor es ***0.759 ***. Al ser un valor mayor que alpha = 0.05 (5%), nos impidiría rechazar la hipótesis nula, por lo que no sería una variable significativa para predecir la calidad del vino.***     
+
+***Teniendo en cuenta el mismo razonamiento, también podríamos optar por eliminar la variable 'Azúcar_residual', aunque su p-valor ***0.631***, que también excede de 0.05, es algo menor que la variable 'ph'.***
